@@ -39,6 +39,8 @@ class ImportTMD():
     def execute(self, context):
         import os
         from mathutils import Matrix
+        from . import tmd_utils
+        from . import blender_utils
 
         paths = [os.path.join(self.directory, name.name) for name in self.files]
 
@@ -61,6 +63,11 @@ class ImportTMD():
 
         if bpy.ops.object.select_all.poll():
             bpy.ops.object.select_all(action='DESELECT')
+
+        for path in paths:
+            objName = bpy.path.display_name_from_filepath(path)
+            indices, pts = tmd_utils.read_tmd(path)
+            blender_utils.create_and_link_mesh(objName, indices, pts, global_matrix)
 
         return {'FINISHED'}
     
