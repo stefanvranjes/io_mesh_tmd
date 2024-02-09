@@ -5,7 +5,7 @@
 
 ### Windows
 
-1. Place io_mesh_tmd (not root) folder inside Blender directory: Blender Foundation\Blender (VERSION)\(VERSION)\scripts\addons
+1. Place io_mesh_tmd (not root) folder inside Blender directory: Blender Foundation\Blender USER_VERSION\USER_VERSION\scripts\addons
 2. Open Blender and navigate to Edit -> Preferences... -> Add-ons
 3. Check Import-Export: TMD format
 
