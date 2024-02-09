@@ -24,8 +24,14 @@ def _binary_read(data):
     import os
     import struct
 
-    tri_offset, quad_offset = struct.unpack('<I', data.read(8))
-    tri_count, quad_count = struct.unpack('<H', data.read(4))
+    tri_offset = struct.unpack('<I', data.read(4))[0]
+    quad_offset = struct.unpack('<I', data.read(4))[0]
+    tri_count = struct.unpack('<H', data.read(2))[0]
+    quad_count = struct.unpack('<H', data.read(2))[0]
+
+    # temporery ramAddress fix
+    quad_offset = quad_offset - tri_offset + 12
+    tri_offset = 12
 
     data.seek(tri_offset, os.SEEK_SET)
     tri_unpack = struct.Struct('<20h').unpack_from
@@ -37,12 +43,12 @@ def _binary_read(data):
         yield tuple(tuple(map(float, tup)) for tup in t)
 
     data.seek(quad_offset, os.SEEK_SET)
-    quad_unpack = struct.Struct('<26').unpack_from
+    quad_unpack = struct.Struct('<26h').unpack_from
     quad_buf = data.read(BINARY_STRIDE_QUAD * quad_count)
     for j in range(quad_count):
         # read the colors, uvs and points coordinates of each quad
         pt = quad_unpack(quad_buf, BINARY_STRIDE_QUAD * j)
-        t = (pt[:3], pt[4:7], pt[8:11], pt[12:15])
+        t = (pt[:3], pt[4:7], pt[12:15], pt[8:11])
         yield tuple(tuple(map(float, tup)) for tup in t)
 
 def read_tmd(filepath):

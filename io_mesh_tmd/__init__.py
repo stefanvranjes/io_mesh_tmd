@@ -28,13 +28,42 @@ from bpy.types import (
     OperatorFileListElement,
 )
 
-class ImportTMD():
+@orientation_helper(axis_forward='Y', axis_up='Z')
+class ImportTMD(Operator, ImportHelper):
     bl_idname = "import_mesh.tmd"
     bl_label = "Import TMD"
     bl_description = "Load TMD triangle mesh data"
     bl_options = {'UNDO'}
 
     filename_ext = ".tmd"
+
+    filter_glob: StringProperty(
+        default="*.tmd",
+        options={'HIDDEN'},
+    )
+    files: CollectionProperty(
+        name="File Path",
+        type=OperatorFileListElement,
+    )
+    directory: StringProperty(
+        subtype='DIR_PATH',
+    )
+    global_scale: FloatProperty(
+        name="Scale",
+        soft_min=0.001, soft_max=1000.0,
+        min=1e-6, max=1e6,
+        default=1.0,
+    )
+    use_scene_unit: BoolProperty(
+        name="Scene Unit",
+        description="Apply current scene's unit (as defined by unit scale) to imported data",
+        default=False,
+    )
+    use_facet_normal: BoolProperty(
+        name="Facet Normals",
+        description="Use (import) facet normals (note that this will still give flat shading)",
+        default=False,
+    )
 
     def execute(self, context):
         import os
@@ -74,11 +103,63 @@ class ImportTMD():
     def draw(self, context):
         pass
 
+class TMD_PT_import_transform(bpy.types.Panel):
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = "Transform"
+    bl_parent_id = "FILE_PT_operator"
+
+    @classmethod
+    def poll(cls, context):
+        sfile = context.space_data
+        operator = sfile.active_operator
+
+        return operator.bl_idname == "IMPORT_MESH_OT_tmd"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+        layout.use_property_decorate = False  # No animation.
+
+        sfile = context.space_data
+        operator = sfile.active_operator
+
+        layout.prop(operator, "global_scale")
+        layout.prop(operator, "use_scene_unit")
+
+        layout.prop(operator, "axis_forward")
+        layout.prop(operator, "axis_up")
+
+class TMD_PT_import_geometry(bpy.types.Panel):
+    bl_space_type = 'FILE_BROWSER'
+    bl_region_type = 'TOOL_PROPS'
+    bl_label = "Geometry"
+    bl_parent_id = "FILE_PT_operator"
+
+    @classmethod
+    def poll(cls, context):
+        sfile = context.space_data
+        operator = sfile.active_operator
+
+        return operator.bl_idname == "IMPORT_MESH_OT_tmd"
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+        layout.use_property_decorate = False  # No animation.
+
+        sfile = context.space_data
+        operator = sfile.active_operator
+
+        layout.prop(operator, "use_facet_normal")
+
 def menu_import(self, context):
     self.layout.operator(ImportTMD.bl_idname, text="Tmd (.tmd)")
 
 classes = (
-    ImportTMD
+    ImportTMD, 
+    TMD_PT_import_transform, 
+    TMD_PT_import_geometry,
 )
 
 def register():
