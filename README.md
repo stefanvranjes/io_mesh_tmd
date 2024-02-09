@@ -12,5 +12,3 @@
 ![alt text](https://github.com/stefanvranjes/io_mesh_tmd/blob/main/PREFS.PNG?raw=true)
 
 4. Now import or export a TMD by navigating to File -> Import/Export -> Tmd (.tmd)
-
-When updating from previous versions of this mod, you must patch your .bin file again to be up-to-date.
