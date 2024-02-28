@@ -17,8 +17,10 @@ class ListDict(dict):
     
 BINARY_STRIDE_TRI = 8 * 3 + 4 + 4 * 3
 BINARY_STRIDE_TRI2 = 2 * 3 + 4 + 2 * 3
+BINARY_STRIDE_TRI3 = 8 * 3 + 8 * 3
 BINARY_STRIDE_QUAD = 8 * 4 + 4 + 4 * 4
 BINARY_STRIDE_QUAD2 = 2 * 4 + 4 + 2 * 4
+BINARY_STRIDE_QUAD3 = 8 * 4 + 8 * 4
 BINARY_STRIDE_VERT = 4 * 2
 TRANSLATE_FACTOR = 16
 TRANSLATE_FACTOR_NRML = 4096
@@ -117,6 +119,41 @@ def _binary_read2(data):
 
     return verts, nors, indices
 
+def _binary_read3(data):
+    # Skip header...
+
+    import os
+    import struct
+
+    tri_offset = struct.unpack('<I', data.read(4))[0]
+    quad_offset = struct.unpack('<I', data.read(4))[0]
+    tri_count = struct.unpack('<H', data.read(2))[0]
+    quad_count = struct.unpack('<H', data.read(2))[0]
+
+    # temporery ramAddress fix
+    quad_offset = quad_offset - tri_offset + 12
+    tri_offset = 12
+
+    data.seek(tri_offset, os.SEEK_SET)
+    tri_unpack = struct.Struct('<24h').unpack_from
+    tri_buf = data.read(BINARY_STRIDE_TRI3 * tri_count)
+    for i in range(tri_count):
+        # read the uvs and points coordinates of each triangle
+        pt = tri_unpack(tri_buf, BINARY_STRIDE_TRI3 * i)
+        t1 = (pt[:3], pt[4:7], pt[8:11])
+        t2 = (pt[12:15], pt[16:19], pt[20:23])
+        yield tuple(tuple(map(translate, tup)) for tup in t1), tuple(tuple(map(translate2, tup)) for tup in t2)
+
+    data.seek(quad_offset, os.SEEK_SET)
+    quad_unpack = struct.Struct('<32h').unpack_from
+    quad_buf = data.read(BINARY_STRIDE_QUAD * quad_count)
+    for j in range(quad_count):
+        # read the uvs and points coordinates of each quad
+        pt = quad_unpack(quad_buf, BINARY_STRIDE_QUAD * j)
+        t1 = (pt[:3], pt[4:7], pt[12:15], pt[8:11])
+        t2 = (pt[16:19], pt[20:23], pt[28:31], pt[24:27])
+        yield tuple(tuple(map(translate, tup)) for tup in t1), tuple(tuple(map(translate2, tup)) for tup in t2)
+
 def read_tmd(filepath):
     import time
     start_time = time.process_time()
@@ -146,9 +183,31 @@ def read_tmd2(filepath):
 
     with open(filepath, 'rb') as data:
         # check for ascii or binary
-        gen = _binary_read
+        gen = _binary_read2
         pts, nors, indices = gen(data)
 
     print('Import finished in %.4f sec.' % (time.process_time() - start_time))
 
     return indices, nors, pts
+
+def read_tmd3(filepath):
+    import time
+    start_time = time.process_time()
+
+    indices, pts, nors = [], ListDict(), []
+
+    with open(filepath, 'rb') as data:
+        # check for ascii or binary
+        gen = _binary_read3
+
+        for pt, nor in gen(data):
+            # Add the triangle (quad) and the point.
+            # If the point is already in the list of points, the
+            # index returned by pts.add() will be the one from the
+            # first equal point inserted.
+            indices.append([pts.add(p) for p in pt])
+            nors.append(nor)
+
+    print('Import finished in %.4f sec.' % (time.process_time() - start_time))
+
+    return indices, nors, pts.list
